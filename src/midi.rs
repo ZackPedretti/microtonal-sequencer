@@ -1,8 +1,8 @@
-use std::sync::{Arc, Mutex};
-use midir::{Ignore, MidiInput, MidiInputConnection, MidiOutput, MidiOutputConnection};
-use crate::sequencer::Sequencer;
 use crate::clock::Clock;
 use crate::note::Note;
+use crate::sequencer::Sequencer;
+use midir::{Ignore, MidiInput, MidiInputConnection, MidiOutput, MidiOutputConnection};
+use std::sync::{Arc, Mutex};
 
 fn midi_input_handler(
     seq: Arc<Mutex<Sequencer>>,
@@ -23,7 +23,7 @@ fn midi_input_handler(
                         send_note(&mut conn, note, false);
                     }
                     send_note(&mut conn, current_note, true);
-                    seq.next();
+                    seq.next_note();
                 }
                 clock.next();
             },
