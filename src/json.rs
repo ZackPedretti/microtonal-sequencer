@@ -17,6 +17,23 @@ pub struct ScaleFile {
     pub scales: Vec<JsonScale>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct JsonNote {
+    pub note_index: u8,
+    octave: u8,
+    duration: f64,
+    velocity: u8,
+    panning: u8,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct JsonSequence {
+    pub name: String,
+    pub scale: String,
+    pub repeat: u8,
+    pub notes: Vec<JsonNote>,
+}
+
 fn build_scale_file_from_json_file(path: &str) -> serde_json::Result<ScaleFile> {
     let file = match File::open(path) {
         Ok(f) => f,

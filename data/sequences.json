@@ -1,6 +1,8 @@
-{
-  "basic-example-1": {
+[
+  {
+    "name": "basic 12-TET example",
     "scale": "12-TET",
+    "repeat": 0,
     "notes": [
       {
         "note_index": 11,
@@ -60,8 +62,10 @@
       }
     ]
   },
-  "basic-example-2": {
+  {
+    "name": "basic 12-TET example 2",
     "scale": "12-TET",
+    "repeat": 0,
     "notes": [
       {
         "note_index": 11,
@@ -121,4 +125,4 @@
       }
     ]
   }
-}
+]
