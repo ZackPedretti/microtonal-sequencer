@@ -1,33 +1,61 @@
+use crate::json::JsonScale;
+use std::fmt;
 use std::sync::{Arc, Mutex};
 
 pub(crate) struct Scale {
-    name: &'static str,
+    name: String,
     steps: Vec<f64>,
+    note_names: Vec<String>,
 }
 
 impl Scale {
     pub fn new_12_tet() -> Self {
         Scale {
-            name: "12-TET",
-            steps: (0..12).map(|x| x as f64).collect()
+            name: "12-TET".parse().unwrap(),
+            steps: (0..12).map(|x| x as f64).collect(),
+            note_names: vec![
+                "C".parse().unwrap(),
+                "C# / Db".parse().unwrap(),
+                "D".parse().unwrap(),
+                "D# / Eb".parse().unwrap(),
+                "E".parse().unwrap(),
+                "F".parse().unwrap(),
+                "F# / Gb".parse().unwrap(),
+                "G".parse().unwrap(),
+                "G# / Ab".parse().unwrap(),
+                "A".parse().unwrap(),
+                "A# / Bb".parse().unwrap(),
+                "B".parse().unwrap(),
+            ],
         }
     }
-    pub fn new_24_tet() -> Self {
+    pub fn from_json_scale(json_scale: &JsonScale) -> Self {
         Scale {
-            name: "24-TET",
-            steps: (0..24).map(|x| x as f64 / 2f64).collect()
+            name: json_scale.name.clone(),
+            steps: json_scale.steps.clone(),
+            note_names: json_scale.note_names.clone(),
         }
+    }
+}
+
+impl fmt::Display for Scale {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Scale {{ name: {}, steps: {:?}, note_names: {:?} }}",
+            self.name, self.steps, self.note_names
+        )
     }
 }
 
 #[derive(Clone)]
 pub(crate) struct Note {
-    scale: Arc<Mutex<Scale>>,
-    octave: u8,
+    pub(crate) scale: Arc<Mutex<Scale>>,
+    pub(crate) octave: u8,
     pub(crate) duration: NoteDuration,
-    note_index: usize,
-    velocity: u8,
-    panning: u8,
+    pub(crate) note_index: usize,
+    pub(crate) velocity: u8,
+    pub(crate) panning: u8,
 }
 
 impl Note {
@@ -48,16 +76,31 @@ impl Note {
     pub fn get_midi_number(&self) -> f64 {
         let scale = self.scale.lock().unwrap();
         let scale_note = match scale.steps.get(self.note_index) {
-            None => {scale.steps[scale.steps.len() - 1]},
-            Some(n) => { *n }
+            None => scale.steps[scale.steps.len() - 1],
+            Some(n) => *n,
         };
         scale_note + (self.octave * 12) as f64
     }
 }
 
+impl fmt::Display for Note {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Note(scale: {}, octave: {}, duration: {}, note: {}, velocity: {}, panning: {})",
+            self.scale.lock().unwrap().name,
+            self.octave,
+            self.duration.duration,
+            self.scale.lock().unwrap().note_names[self.note_index],
+            self.velocity,
+            self.panning,
+        )
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct NoteDuration {
-    duration: f64,
+    pub(crate) duration: f64,
 }
 
 impl NoteDuration {

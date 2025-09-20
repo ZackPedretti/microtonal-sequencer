@@ -1,5 +1,6 @@
+use std::fmt;
 use std::sync::{Arc, Mutex};
-use crate::note::{Note, Scale };
+use crate::note::{Note, NoteDuration, Scale};
 
 /// A sequence of notes that plays using a specified scale.
 ///
@@ -23,6 +24,83 @@ impl Sequence {
     pub(crate) fn new() -> Self {
         let scale = Arc::new(Mutex::new(Scale::new_12_tet()));
         let notes = Arc::new(Mutex::new(vec![Note::new(scale.clone()); 8]));
+        Self {
+            scale,
+            notes,
+            current_note_index: 0,
+            previous_note_index: None,
+            repeat: 0,
+        }
+    }
+
+    pub fn new_test() -> Self {
+        let scale = Arc::new(Mutex::new(Scale::new_12_tet()));
+        let notes = Arc::new(Mutex::new(vec![
+            Note{
+                scale: scale.clone(),
+                octave: 5,
+                duration: NoteDuration{duration: 0.5},
+                note_index: 0,
+                velocity: 100,
+                panning: 64
+            },
+            Note{
+                scale: scale.clone(),
+                octave: 5,
+                duration: NoteDuration{duration: 0.5},
+                note_index: 2,
+                velocity: 100,
+                panning: 64
+            },
+            Note{
+                scale: scale.clone(),
+                octave: 5,
+                duration: NoteDuration{duration: 0.5},
+                note_index: 4,
+                velocity: 100,
+                panning: 64
+            },
+            Note{
+                scale: scale.clone(),
+                octave: 5,
+                duration: NoteDuration{duration: 0.5},
+                note_index: 5,
+                velocity: 100,
+                panning: 64
+            },
+            Note{
+                scale: scale.clone(),
+                octave: 5,
+                duration: NoteDuration{duration: 0.5},
+                note_index: 7,
+                velocity: 100,
+                panning: 64
+            },
+            Note{
+                scale: scale.clone(),
+                octave: 5,
+                duration: NoteDuration{duration: 0.5},
+                note_index: 9,
+                velocity: 100,
+                panning: 64
+            },
+            Note{
+                scale: scale.clone(),
+                octave: 5,
+                duration: NoteDuration{duration: 0.5},
+                note_index: 11,
+                velocity: 100,
+                panning: 64
+            },
+            Note{
+                scale: scale.clone(),
+                octave: 6,
+                duration: NoteDuration{duration: 0.5},
+                note_index: 0,
+                velocity: 100,
+                panning: 64
+            }
+        ]));
         Self {
             scale,
             notes,
@@ -59,6 +137,28 @@ impl Sequence {
     }
 }
 
+impl fmt::Display for Sequence {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let scale = self.scale.lock().map_err(|_| fmt::Error)?;
+        let notes = self.notes.lock().map_err(|_| fmt::Error)?;
+
+        let notes_str = notes
+            .iter()
+            .map(|note| note.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        write!(
+            f,
+            "Sequence {{ scale: {}, notes: [{}], repeat: {} }}",
+            *scale,
+            notes_str,
+            self.repeat
+        )
+    }
+}
+
+
 pub(crate) struct Sequencer {
     sequences: Vec<Sequence>,
     current_sequence_index: usize,
@@ -68,7 +168,7 @@ pub(crate) struct Sequencer {
 impl Sequencer {
     pub fn new() -> Self {
         Self {
-            sequences: vec![Sequence::new()],
+            sequences: vec![Sequence::new_test()],
             current_sequence_index: 0,
             times_repeated: 0,
         }
