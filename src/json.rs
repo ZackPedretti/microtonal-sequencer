@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::BufReader;
-use serde::de::Error;
 use serde::Deserialize;
 use serde_json;
 use crate::note::Scale;
@@ -13,8 +12,13 @@ pub struct JsonScale {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ScaleFile {
+pub struct JsonScaleFile {
     pub scales: Vec<JsonScale>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct JsonSequenceFile {
+    pub sequences: Vec<JsonSequence>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -34,29 +38,28 @@ pub struct JsonSequence {
     pub notes: Vec<JsonNote>,
 }
 
-fn build_scale_file_from_json_file(path: &str) -> serde_json::Result<ScaleFile> {
-    let file = match File::open(path) {
-        Ok(f) => f,
-        Err(e) => return Err(serde_json::Error::custom(e)),
-    };
+fn read_scale_file(path: &str) -> serde_json::Result<JsonScaleFile> {
+    let file = File::open(path).map_err(serde_json::Error::io)?;
     let reader = BufReader::new(file);
-    match serde_json::from_reader(reader) {
-        Ok(f) => Ok(f),
-        Err(e) => Err(serde_json::Error::custom(e)),
+    serde_json::from_reader(reader)
+}
+
+fn build_scale_from_json_scale(json_scale: JsonScale) -> Scale {
+    Scale {
+        name: json_scale.name.clone(),
+        steps: json_scale.steps.clone(),
+        note_names: json_scale.note_names.clone(),
     }
 }
 
-fn build_json_scale_from_json_file(path: &str) -> serde_json::Result<Vec<JsonScale>> {
-    match build_scale_file_from_json_file(path) {
-        Ok(f) => {Ok(f.scales)},
-        Err(e) => {Err(serde_json::Error::custom(e))}
-    }
-}
-
-pub fn get_scales_from_json_file(path: &str) -> Vec<Scale> {
-    let json_scales = match build_json_scale_from_json_file(path) {
-        Ok(s) => {s}
-        Err(e) => {panic!("{}", e)}
+pub fn get_scales_from_json_file(path: &str) -> serde_json::Result<Vec<Scale>> {
+    let file = match(read_scale_file(path)) {
+        Ok(f) => {f}
+        Err(e) => {return Err(e)}
     };
-    json_scales.iter().map(|s| Scale::from_json_scale(s)).collect()
+    
+    Ok(file.scales
+        .into_iter()
+        .map(build_scale_from_json_scale)
+        .collect())
 }

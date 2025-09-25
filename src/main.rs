@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use crate::json::get_scales_from_json_file;
 
 fn main() {
-    let scales = get_scales_from_json_file("data\\scales.json");
+    let scales = get_scales_from_json_file("data\\scales.json").unwrap();
     let _ = scales.iter().for_each(|s| println!("{}", s));
     let sequencer = Arc::new(Mutex::new(Sequencer::new()));
     let output_conn = Arc::new(Mutex::new(create_output_connection()));

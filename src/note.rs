@@ -1,11 +1,10 @@
-use crate::json::JsonScale;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
 pub(crate) struct Scale {
-    name: String,
-    steps: Vec<f64>,
-    note_names: Vec<String>,
+    pub(crate) name: String,
+    pub(crate) steps: Vec<f64>,
+    pub(crate) note_names: Vec<String>,
 }
 
 impl Scale {
@@ -27,13 +26,6 @@ impl Scale {
                 "A# / Bb".parse().unwrap(),
                 "B".parse().unwrap(),
             ],
-        }
-    }
-    pub fn from_json_scale(json_scale: &JsonScale) -> Self {
-        Scale {
-            name: json_scale.name.clone(),
-            steps: json_scale.steps.clone(),
-            note_names: json_scale.note_names.clone(),
         }
     }
 }
