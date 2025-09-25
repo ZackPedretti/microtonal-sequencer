@@ -1,6 +1,6 @@
 use std::fmt;
-use std::sync::{Arc, Mutex};
-use crate::note::{Note, NoteDuration, Scale};
+use std::sync::{Arc};
+use crate::note::{Note, Scale};
 
 /// A sequence of notes that plays using a specified scale.
 ///
@@ -13,95 +13,18 @@ use crate::note::{Note, NoteDuration, Scale};
 ///     - `0` means it plays once.
 ///     - `n` means it plays `n + 1` times.
 pub(crate) struct Sequence {
-    scale: Arc<Mutex<Scale>>,
-    notes: Arc<Mutex<Vec<Note>>>,
+    name: String,
+    scale: Arc<Scale>,
+    notes: Vec<Note>,
     current_note_index: usize,
     previous_note_index: Option<usize>,
     repeat: u8,
 }
 
 impl Sequence {
-    pub(crate) fn new() -> Self {
-        let scale = Arc::new(Mutex::new(Scale::new_12_tet()));
-        let notes = Arc::new(Mutex::new(vec![Note::new(scale.clone()); 8]));
+    pub(crate) fn new(name: String, scale: Arc<Scale>, notes: Vec<Note>) -> Self {
         Self {
-            scale,
-            notes,
-            current_note_index: 0,
-            previous_note_index: None,
-            repeat: 0,
-        }
-    }
-
-    pub fn new_test() -> Self {
-        let scale = Arc::new(Mutex::new(Scale::new_12_tet()));
-        let notes = Arc::new(Mutex::new(vec![
-            Note{
-                scale: scale.clone(),
-                octave: 5,
-                duration: NoteDuration{duration: 0.5},
-                note_index: 0,
-                velocity: 100,
-                panning: 64
-            },
-            Note{
-                scale: scale.clone(),
-                octave: 5,
-                duration: NoteDuration{duration: 0.5},
-                note_index: 2,
-                velocity: 100,
-                panning: 64
-            },
-            Note{
-                scale: scale.clone(),
-                octave: 5,
-                duration: NoteDuration{duration: 0.5},
-                note_index: 4,
-                velocity: 100,
-                panning: 64
-            },
-            Note{
-                scale: scale.clone(),
-                octave: 5,
-                duration: NoteDuration{duration: 0.5},
-                note_index: 5,
-                velocity: 100,
-                panning: 64
-            },
-            Note{
-                scale: scale.clone(),
-                octave: 5,
-                duration: NoteDuration{duration: 0.5},
-                note_index: 7,
-                velocity: 100,
-                panning: 64
-            },
-            Note{
-                scale: scale.clone(),
-                octave: 5,
-                duration: NoteDuration{duration: 0.5},
-                note_index: 9,
-                velocity: 100,
-                panning: 64
-            },
-            Note{
-                scale: scale.clone(),
-                octave: 5,
-                duration: NoteDuration{duration: 0.5},
-                note_index: 11,
-                velocity: 100,
-                panning: 64
-            },
-            Note{
-                scale: scale.clone(),
-                octave: 6,
-                duration: NoteDuration{duration: 0.5},
-                note_index: 0,
-                velocity: 100,
-                panning: 64
-            }
-        ]));
-        Self {
+            name,
             scale,
             notes,
             current_note_index: 0,
@@ -111,24 +34,23 @@ impl Sequence {
     }
 
     pub(crate) fn current_note(&self) -> Note {
-        self.notes.lock().unwrap()[self.current_note_index].clone()
+        self.notes[self.current_note_index].clone()
     }
 
     pub(crate) fn previous_note(&self) -> Option<Note> {
         match self.previous_note_index {
             None => None,
-            Some(i) => Some(self.notes.lock().unwrap()[i].clone()),
+            Some(i) => Some(self.notes[i].clone()),
         }
     }
 
     pub fn is_on_last_note(&self) -> bool {
-        self.current_note_index == (self.notes.lock().unwrap().len() - 1)
+        self.current_note_index == (self.notes.len() - 1)
     }
 
     pub(crate) fn next(&mut self) {
         self.previous_note_index = Some(self.current_note_index);
-        let notes = self.notes.lock().unwrap();
-        self.current_note_index = (self.current_note_index + 1) % notes.len();
+        self.current_note_index = (self.current_note_index + 1) % self.notes.len();
     }
 
     pub(crate) fn reset(&mut self) {
@@ -139,10 +61,8 @@ impl Sequence {
 
 impl fmt::Display for Sequence {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let scale = self.scale.lock().map_err(|_| fmt::Error)?;
-        let notes = self.notes.lock().map_err(|_| fmt::Error)?;
 
-        let notes_str = notes
+        let notes_str = self.notes
             .iter()
             .map(|note| note.to_string())
             .collect::<Vec<_>>()
@@ -151,7 +71,7 @@ impl fmt::Display for Sequence {
         write!(
             f,
             "Sequence {{ scale: {}, notes: [{}], repeat: {} }}",
-            *scale,
+            *self.scale,
             notes_str,
             self.repeat
         )
@@ -166,9 +86,9 @@ pub(crate) struct Sequencer {
 }
 
 impl Sequencer {
-    pub fn new() -> Self {
+    pub fn new(sequences: Vec<Sequence>) -> Self {
         Self {
-            sequences: vec![Sequence::new_test()],
+            sequences,
             current_sequence_index: 0,
             times_repeated: 0,
         }

@@ -13,7 +13,6 @@ fn midi_input_handler(
     move |_stamp: u64, message: &[u8], _: &mut ()| {
         match message[0] {
             0xF8 => {
-                println!("Clock tick");
                 let mut seq = seq.lock().unwrap();
                 let current_note = seq.current_note();
                 if clock.has_time_passed_note(current_note.duration.get_tick_length()) {
@@ -28,12 +27,10 @@ fn midi_input_handler(
                 clock.next();
             },
             0xFA => {
-                println!("Start");
                 clock.reset_tick();
                 let mut seq = seq.lock().unwrap();
                 seq.reset();
             },
-            0xFC => println!("Stop"),
             _ => {}
         }
     }
