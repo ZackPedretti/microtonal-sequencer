@@ -16,8 +16,6 @@ pub(crate) struct Sequence {
     name: String,
     scale: Arc<Scale>,
     notes: Vec<Note>,
-    current_note_index: usize,
-    previous_note_index: Option<usize>,
     repeat: u8,
 }
 
@@ -27,35 +25,8 @@ impl Sequence {
             name,
             scale,
             notes,
-            current_note_index: 0,
-            previous_note_index: None,
             repeat: 0,
         }
-    }
-
-    pub(crate) fn current_note(&self) -> Note {
-        self.notes[self.current_note_index].clone()
-    }
-
-    pub(crate) fn previous_note(&self) -> Option<Note> {
-        match self.previous_note_index {
-            None => None,
-            Some(i) => Some(self.notes[i].clone()),
-        }
-    }
-
-    pub fn is_on_last_note(&self) -> bool {
-        self.current_note_index == (self.notes.len() - 1)
-    }
-
-    pub(crate) fn next(&mut self) {
-        self.previous_note_index = Some(self.current_note_index);
-        self.current_note_index = (self.current_note_index + 1) % self.notes.len();
-    }
-
-    pub(crate) fn reset(&mut self) {
-        self.current_note_index = 0;
-        self.previous_note_index = None;
     }
 }
 
@@ -83,60 +54,62 @@ pub(crate) struct Sequencer {
     sequences: Vec<Sequence>,
     current_sequence_index: usize,
     times_repeated: u8,
+    current_note_index: usize,
+    previous_note: Option<Note>
 }
 
 impl Sequencer {
-    pub fn new(sequences: Vec<Sequence>) -> Self {
-        Self {
-            sequences,
-            current_sequence_index: 0,
-            times_repeated: 0,
-        }
-    }
 
-    pub fn new_from_sequences(sequences: Vec<Sequence>) -> Self {
+    pub fn new(sequences: Vec<Sequence>) -> Self {
+        let first_note = sequences[0].notes[0].clone();
         Self {
             sequences,
             current_sequence_index: 0,
             times_repeated: 0,
+            current_note_index: 0,
+            previous_note: None
         }
     }
 
     pub fn reset(&mut self) {
-        let current_sequence = &mut self.sequences[self.current_sequence_index];
-        current_sequence.reset();
         self.current_sequence_index = 0;
+        self.current_note_index = 0;
         self.times_repeated = 0;
+        self.previous_note = None;
     }
 
     pub fn next_note(&mut self) {
+        
+        self.previous_note = Some(self.current_note());
 
         // Optimization: no need to check if we need to change sequence if the sequencer has
         // only one sequence
         if self.sequences.len() == 1 {
-            self.sequences[0].next();
+            self.current_note_index = (self.current_note_index + 1) % self.sequences[0].notes.len();
             return;
         }
 
-        let mut current_sequence = &mut self.sequences[self.current_sequence_index];
-        if !current_sequence.is_on_last_note() {
-            current_sequence.next();
-            return;
+        let current_sequence = &mut self.sequences[self.current_sequence_index];
+
+        if self.current_note_index == current_sequence.notes.len() - 1 {
+            self.times_repeated += 1;
         }
-        self.times_repeated += 1;
-        if self.times_repeated <= current_sequence.repeat {
-            return;
+        if self.times_repeated > current_sequence.repeat {
+            self.times_repeated = 0;
+            self.current_sequence_index = (self.current_sequence_index + 1) % self.sequences.len();
+            self.current_note_index = 0;
         }
-        current_sequence.reset();
-        self.times_repeated = 0;
-        self.current_sequence_index = (self.current_sequence_index + 1) % self.sequences.len();
+        else {
+            self.current_note_index = (self.current_note_index + 1) % current_sequence.notes.len();
+        }
+
     }
 
     pub fn current_note(&self) -> Note {
-        (&self.sequences[self.current_sequence_index]).current_note()
+        self.sequences[self.current_sequence_index].notes[self.current_note_index].clone()
     }
 
     pub fn previous_note(&self) -> Option<Note> {
-        (&self.sequences[self.current_sequence_index]).previous_note()
+        self.previous_note.clone()
     }
 }
