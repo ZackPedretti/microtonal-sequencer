@@ -61,7 +61,6 @@ pub(crate) struct Sequencer {
 impl Sequencer {
 
     pub fn new(sequences: Vec<Sequence>) -> Self {
-        let first_note = sequences[0].notes[0].clone();
         Self {
             sequences,
             current_sequence_index: 0,
