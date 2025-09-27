@@ -60,9 +60,6 @@ fn send_pitch_bend(conn: &mut MidiOutputConnection, bend: i16, channel: u8) {
 
     let status = 0xE0 | (channel & 0x0F);
     let message = [status, lsb, msb];
-
-    println!("sending pitchbend value={} -> LSB={} MSB={} msg=[{},{},{}]",
-             value, lsb, msb, status, lsb, msb);
     conn.send(&message).unwrap();
 }
 
@@ -85,7 +82,6 @@ fn send_note(conn: &mut MidiOutputConnection, note: Note, on: bool) {
 
     let msg = [status, note_number, velocity];
     conn.send(&msg).unwrap();
-    println!("NOTE: {:?}, pitch={}", msg, note_pitch);
 }
 pub(crate) fn create_output_connection() -> MidiOutputConnection {
     let midi_out = MidiOutput::new("Rust Sequencer").unwrap();
