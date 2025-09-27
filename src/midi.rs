@@ -53,15 +53,40 @@ pub(crate) fn create_input_connection(
     midi_in.connect(port, "midir-read-input", handler, ()).unwrap()
 }
 
+fn send_pitch_bend(conn: &mut MidiOutputConnection, bend: i16, channel: u8) {
+    let value = (bend + 8192).clamp(0, 16383) as u16;
+    let lsb = (value & 0x7F) as u8;       // lower 7 bits
+    let msb = ((value >> 7) & 0x7F) as u8; // upper 7 bits
 
-fn send_note(conn: &mut MidiOutputConnection, note: Note, on: bool) {
-    let status = if on { 0x90 } else { 0x80 }; // note_on / note_off
-    let note_pitch = note.get_midi_number();
-    let macro_pitch = note_pitch.round() as u8;
-    let msg = [status, macro_pitch, 100];
-    conn.send(&msg).unwrap();
+    let status = 0xE0 | (channel & 0x0F);
+    let message = [status, lsb, msb];
+
+    println!("sending pitchbend value={} -> LSB={} MSB={} msg=[{},{},{}]",
+             value, lsb, msb, status, lsb, msb);
+    conn.send(&message).unwrap();
 }
 
+fn pitch_bend_calculation(shift: f64, range: i16) -> i16 {
+    ((shift / range as f64) * (8192f64)) as i16
+}
+
+fn send_note(conn: &mut MidiOutputConnection, note: Note, on: bool) {
+    let channel = 0;
+    let status = if on { 0x90 | channel } else { 0x80 | channel };
+    let note_pitch = note.get_midi_number();
+    let note_number = note_pitch.floor() as u8;
+    let velocity = 100;
+
+    let shift = note_pitch - note_pitch.floor();
+    if on {
+        let bend = pitch_bend_calculation(shift, 2);
+        send_pitch_bend(conn, bend, channel);
+    }
+
+    let msg = [status, note_number, velocity];
+    conn.send(&msg).unwrap();
+    println!("NOTE: {:?}, pitch={}", msg, note_pitch);
+}
 pub(crate) fn create_output_connection() -> MidiOutputConnection {
     let midi_out = MidiOutput::new("Rust Sequencer").unwrap();
 
