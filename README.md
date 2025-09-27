@@ -3,6 +3,4 @@ Standalone software application that sends MIDI notes to your DAW. Made to be mi
 Made with the library "midir".
 
 Can read sequences from json files.
-Cannot yet send microtonal notes to the DAW.
-
-The sequencer will use the pitch wheel to shift the pitch and play microtonal notes.
+The sequencer uses pitch wheel signals to send microtonal notes. In FL Studio, you need to link the controler so it registers the pitch wheel signals as such.
