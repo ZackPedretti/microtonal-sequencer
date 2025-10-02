@@ -18,9 +18,17 @@ use crate::tui::run_tui;
 const SCALE_PATH: &str = "data\\scales.json";
 const SEQUENCE_PATH: &str = "data\\sequences.json";
 
-fn start_sequencer(sequencer: Arc<Mutex<sequencer::Sequencer>>, on: Arc<AtomicBool>) {
-    let output_conn = Arc::new(Mutex::new(create_output_connection()));
-    let input_conn = create_input_connection(sequencer, output_conn);
+fn start_sequencer(sequencer: Arc<Mutex<sequencer::Sequencer>>, on: Arc<AtomicBool>) -> Result<(), std::io::Error> {
+    on.store(true, Ordering::SeqCst);
+    let output_conn = Arc::new(Mutex::new(create_output_connection()?));
+    let input_conn = create_input_connection(sequencer, output_conn)?;
+    std::thread::spawn(move || {
+        start_main_loop(on.clone(), input_conn);
+    });
+    Ok(())
+}
+
+fn start_main_loop(on: Arc<AtomicBool>, _input_conn: MidiInputConnection<()>) {
     while on.load(Ordering::SeqCst) {
         std::thread::sleep(Duration::from_millis(50));
     }

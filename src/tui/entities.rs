@@ -1,3 +1,4 @@
+use std::io;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use crate::sequencer::Sequencer;
@@ -42,6 +43,7 @@ pub struct App {
     pub(crate) current_menu: Menu,
     pub(crate) sequencer: Arc<Mutex<Sequencer>>,
     pub(crate) sequencer_on: Arc<AtomicBool>,
+    pub error: Option<io::Error>,
 }
 
 impl App {
@@ -53,6 +55,7 @@ impl App {
             },
             sequencer,
             sequencer_on,
+            error: None,
         }
     }
 }

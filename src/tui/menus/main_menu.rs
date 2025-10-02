@@ -1,3 +1,4 @@
+use std::io;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout};
@@ -38,25 +39,26 @@ pub fn draw(frame: &mut Frame, menu_index: usize) {
     frame.render_stateful_widget(list, outer_layout[0], &mut state);
 }
 
-pub fn handle_key(app: &mut App, key_event: KeyEvent) {
+pub fn handle_key(app: &mut App, key_event: KeyEvent) -> Result<(), io::Error> {
     if key_event.kind == KeyEventKind::Press {
-        match key_event.code {
+        return match key_event.code {
             KeyCode::Enter => on_enter(app),
-            KeyCode::Up => on_up(app),
-            KeyCode::Down => on_down(app),
-            _ => {}
+            KeyCode::Up => Ok(on_up(app)),
+            KeyCode::Down => Ok(on_down(app)),
+            _ => {Ok(())}
         }
     }
+    Ok(())
 }
 
-fn on_enter(app: &mut App) {
+fn on_enter(app: &mut App) -> Result<(), io::Error> {
     match &app.current_menu {
         Menu::Main { selected_menu } => match selected_menu {
             MainMenuItem::StartSequencer => sequencer_menu::move_to(app),
             MainMenuItem::LinkController => {link_controller_menu::move_to(app)}
-            MainMenuItem::Exit => exit(app),
+            MainMenuItem::Exit => Ok(exit(app)),
         },
-        _ => {}
+        _ => {Ok(())}
     }
 }
 fn on_up(app: &mut App) {

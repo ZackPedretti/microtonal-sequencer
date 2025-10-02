@@ -1,3 +1,4 @@
+use std::io;
 use crate::clock::Clock;
 use crate::note::Note;
 use crate::sequencer::Sequencer;
@@ -39,18 +40,24 @@ fn midi_input_handler(
 pub(crate) fn create_input_connection(
     seq: Arc<Mutex<Sequencer>>,
     output_conn: Arc<Mutex<MidiOutputConnection>>,
-) -> MidiInputConnection<()> {
+) -> Result<MidiInputConnection<()>, io::Error> {
     let mut midi_in = MidiInput::new("Rust MIDI Input").unwrap();
     midi_in.ignore(Ignore::None);
 
     let in_ports = midi_in.ports();
-    let port = in_ports
+    let input_port_name = "SequencerInput";
+    let port = match in_ports
         .iter()
-        .find(|p| midi_in.port_name(p).unwrap().contains("SequencerInput"))
-        .expect("loopMIDI port not found");
+        .find(|p| midi_in.port_name(p).unwrap().contains(input_port_name)) {
+        Some(p) => p,
+        None => { return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("No input port named '{}' found. Make sure to have a MIDI input port named '{}' using loopMIDI or other tools.", input_port_name, input_port_name),
+        ))}
+    };
 
     let handler = midi_input_handler(seq, output_conn);
-    midi_in.connect(port, "midir-read-input", handler, ()).unwrap()
+    Ok(midi_in.connect(port, "midir-read-input", handler, ()).unwrap())
 }
 
 fn send_pitch_bend(conn: &mut MidiOutputConnection, bend: i16, channel: u8) {
@@ -83,14 +90,20 @@ fn send_note(conn: &mut MidiOutputConnection, note: Note, on: bool) {
     let msg = [status, note_number, velocity];
     conn.send(&msg).unwrap();
 }
-pub(crate) fn create_output_connection() -> MidiOutputConnection {
+pub(crate) fn create_output_connection() -> Result<MidiOutputConnection, io::Error> {
     let midi_out = MidiOutput::new("Rust Sequencer").unwrap();
 
     let out_ports = midi_out.ports();
-    let port = out_ports
+    let output_port_name = "SequencerOutput";
+    let port = match out_ports
         .iter()
-        .find(|p| midi_out.port_name(p).unwrap().contains("SequencerOutput"))
-        .expect("loopMIDI port not found");
+        .find(|p| midi_out.port_name(p).unwrap().contains(output_port_name)) {
+        Some(p) => p,
+        None => { return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("No input port named '{}' found. Make sure to have a MIDI input port named '{}' using loopMIDI or other tools.", output_port_name, output_port_name),
+        ))}
+    };
 
-    midi_out.connect(port, "RustSeq").unwrap()
+    Ok(midi_out.connect(port, "RustSeq").unwrap())
 }
