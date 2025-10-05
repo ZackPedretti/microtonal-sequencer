@@ -1,5 +1,5 @@
 use crate::init_sequencer;
-use crate::tui::entities::{App, Menu, SequencerMenuItem, SubMenuItem};
+use crate::tui::entities::{App, MainMenuItem, Menu, SequencerMenuItem, SubMenuItem};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Style};
@@ -73,10 +73,6 @@ fn handle_key_submenu(app: &mut App, key_event: KeyEvent) -> Result<(), io::Erro
             KeyCode::Enter => on_enter_submenu(app),
             KeyCode::Up => on_up_submenu(app),
             KeyCode::Down => on_down_submenu(app),
-            KeyCode::Char('q') => { 
-                app.tui_on.store(false, Ordering::SeqCst);
-                return Ok(());
-            }
             _ => Ok(()),
         };
     }
@@ -99,11 +95,43 @@ fn on_enter_submenu(app: &mut App) -> Result<(), io::Error> {
 }
 
 fn on_up_submenu(app: &mut App) -> Result<(), io::Error> {
-    Ok(())
+    match &app.current_menu {
+        Menu::Sequencer { selected_menu, selected_note } => {
+            match selected_menu {
+                Some( menu ) => {
+                    app.current_menu = Menu::Sequencer {
+                        selected_menu: Some(SequencerMenuItem::from_index(
+                            (menu.as_index() + MainMenuItem::length() - 1) % MainMenuItem::length(),
+                        )),
+                        selected_note: *selected_note,
+                    };
+                    Ok(())
+                },
+                _ => Err(io::Error::new(io::ErrorKind::Other, "Invalid menu"))
+            }
+        }
+        _ => {Err(io::Error::new(io::ErrorKind::Other, "Invalid menu"))}
+    }
 }
 
 fn on_down_submenu(app: &mut App) -> Result<(), io::Error> {
-    Ok(())
+    match &app.current_menu {
+        Menu::Sequencer { selected_menu, selected_note } => {
+            match selected_menu {
+                Some( menu ) => {
+                    app.current_menu = Menu::Sequencer {
+                        selected_menu: Some(SequencerMenuItem::from_index(
+                            (menu.as_index() + MainMenuItem::length() + 1) % MainMenuItem::length(),
+                        )),
+                        selected_note: *selected_note,
+                    };
+                    Ok(())
+                },
+                _ => Err(io::Error::new(io::ErrorKind::Other, "Invalid menu"))
+            }
+        }
+        _ => {Err(io::Error::new(io::ErrorKind::Other, "Invalid menu"))}
+    }
 }
 
 fn handle_on_off(app: &mut App) -> Result<(), io::Error> {
@@ -123,6 +151,10 @@ fn handle_playlist_menu(app: &mut App) -> Result<(), io::Error> {
 }
 
 fn handle_exit(app: &mut App) -> Result<(), io::Error> {
+    app.sequencer_on.store(false, Ordering::SeqCst);
+    app.current_menu = Menu::Main {
+        selected_menu: MainMenuItem::from_index(0),
+    };
     Ok(())
 }
 
@@ -134,7 +166,6 @@ fn handle_key_notes(app: &mut App, key_event: KeyEvent) -> Result<(), io::Error>
 fn start_sequencer(app: &mut App) -> Result<(), io::Error> {
     init_sequencer(app.sequencer.clone(), app.sequencer_on.clone())
 }
-
 
 pub fn move_to(app: &mut App) -> Result<(), io::Error> {
     match start_sequencer(app) {
