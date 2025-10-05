@@ -82,21 +82,21 @@ impl SubMenuItem for SequencerMenuItem {
 
 pub struct App {
     pub(crate) tui_on: AtomicBool,
+    pub sequencer_on: Arc<AtomicBool>,
     pub(crate) current_menu: Menu,
     pub(crate) sequencer: Arc<Mutex<Sequencer>>,
-    pub(crate) sequencer_on: Arc<AtomicBool>,
     pub error: Option<io::Error>,
 }
 
 impl App {
-    pub fn new(sequencer: Arc<Mutex<Sequencer>>, sequencer_on: Arc<AtomicBool>) -> Self {
+    pub fn new(sequencer: Arc<Mutex<Sequencer>>) -> Self {
         App {
             tui_on: AtomicBool::new(true),
+            sequencer_on: Arc::new(AtomicBool::new(false)),
             current_menu: Menu::Main {
                 selected_menu: MainMenuItem::StartSequencer,
             },
             sequencer,
-            sequencer_on,
             error: None,
         }
     }

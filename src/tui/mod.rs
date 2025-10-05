@@ -1,8 +1,8 @@
 use crate::sequencer::Sequencer;
 use crate::tui::entities::{App, Menu};
-use crate::tui::menus::main_menu;
 use crate::tui::menus::sequencer_menu;
 use crate::tui::menus::{error_screen, link_controller_menu};
+use crate::tui::menus::{main_menu, settings_menu};
 use crossterm::event::{poll, read, Event, KeyEvent};
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
@@ -11,21 +11,20 @@ use crossterm::{event, execute};
 use ratatui::backend::CrosstermBackend;
 use ratatui::{Frame, Terminal};
 use std::io;
-use std::io::Error;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
 mod entities;
 mod menus;
 
-pub fn run_tui(sequencer: Arc<Mutex<Sequencer>>, on: Arc<AtomicBool>) -> Result<(), io::Error> {
+pub fn run_tui(sequencer: Arc<Mutex<Sequencer>>) -> Result<(), io::Error> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = App::new(sequencer.clone(), on.clone());
+    let mut app = App::new(sequencer.clone());
 
     purge_events()?;
 
@@ -66,8 +65,9 @@ fn handle_key(app: &mut App, key_event: KeyEvent) -> Result<(), io::Error> {
     match app.error {
         None => match &app.current_menu {
             Menu::Main { .. } => main_menu::handle_key(app, key_event),
-            Menu::Sequencer => sequencer_menu::handle_key(app, key_event),
+            Menu::Sequencer { .. } => sequencer_menu::handle_key(app, key_event),
             Menu::LinkController => link_controller_menu::handle_key(app, key_event),
+            Menu::Settings => settings_menu::handle_key(app, key_event),
         },
         Some(_) => Ok(error_screen::handle_key(app, key_event)),
     }
@@ -76,9 +76,10 @@ fn handle_key(app: &mut App, key_event: KeyEvent) -> Result<(), io::Error> {
 fn draw_ui(frame: &mut Frame, app: &App) {
     match &app.error {
         None => match &app.current_menu {
-            Menu::Main { selected_menu } => main_menu::draw(frame, selected_menu.as_index()),
-            Menu::Sequencer => sequencer_menu::draw(frame),
+            Menu::Main { .. } => main_menu::draw(frame, app),
+            Menu::Sequencer { .. } => sequencer_menu::draw(frame, app),
             Menu::LinkController => link_controller_menu::draw(frame),
+            Menu::Settings => settings_menu::draw(frame),
         },
         Some(err) => {
             error_screen::draw(frame, err);

@@ -78,13 +78,13 @@ impl Sequencer {
     }
 
     pub fn next_note(&mut self) {
-        
+
         self.previous_note = Some(self.current_note());
 
         // Optimization: no need to check if we need to change sequence if the sequencer has
         // only one sequence
         if self.sequences.len() == 1 {
-            self.current_note_index = (self.current_note_index + 1) % self.sequences[0].notes.len();
+            self.current_note_index = (self.current_note_index + 1) % self.sequences[0].notes.len();            
             return;
         }
 
@@ -101,7 +101,6 @@ impl Sequencer {
         else {
             self.current_note_index = (self.current_note_index + 1) % current_sequence.notes.len();
         }
-
     }
 
     pub fn current_note(&self) -> Note {

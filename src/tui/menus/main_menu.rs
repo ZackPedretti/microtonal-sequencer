@@ -6,10 +6,10 @@ use ratatui::prelude::{Color, Style};
 use ratatui::text::ToSpan;
 use ratatui::widgets::{Block, List, ListItem, ListState};
 use crate::tui::{exit, App};
-use crate::tui::entities::{MainMenuItem, Menu};
-use crate::tui::menus::{link_controller_menu, sequencer_menu};
+use crate::tui::entities::{MainMenuItem, Menu, SubMenuItem};
+use crate::tui::menus::{link_controller_menu, sequencer_menu, settings_menu};
 
-pub fn draw(frame: &mut Frame, menu_index: usize) {
+pub fn draw(frame: &mut Frame, app: &App) {
     let outer_layout = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
@@ -19,6 +19,7 @@ pub fn draw(frame: &mut Frame, menu_index: usize) {
     let mut menus = vec![
         ListItem::new("Start sequencer"),
         ListItem::new("Link controller"),
+        ListItem::new("Settings")
     ];
 
     menus.push(ListItem::new("Exit"));
@@ -32,9 +33,14 @@ pub fn draw(frame: &mut Frame, menu_index: usize) {
         .style(Style::default().fg(Color::LightBlue))
         .highlight_style(Style::default().fg(Color::Black).bg(Color::LightBlue))
         .highlight_symbol("➤ ");
+    
+    let menu_index = match &app.current_menu {
+        Menu::Main { selected_menu } => { Some(selected_menu.as_index()) }
+        _ => { None }
+    };
 
     let mut state = ListState::default();
-    state.select(Some(menu_index));
+    state.select(menu_index);
 
     frame.render_stateful_widget(list, outer_layout[0], &mut state);
 }
@@ -55,7 +61,8 @@ fn on_enter(app: &mut App) -> Result<(), io::Error> {
     match &app.current_menu {
         Menu::Main { selected_menu } => match selected_menu {
             MainMenuItem::StartSequencer => sequencer_menu::move_to(app),
-            MainMenuItem::LinkController => {link_controller_menu::move_to(app)}
+            MainMenuItem::LinkController => link_controller_menu::move_to(app),
+            MainMenuItem::Settings => settings_menu::move_to(app),
             MainMenuItem::Exit => Ok(exit(app)),
         },
         _ => {Ok(())}
