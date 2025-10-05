@@ -5,35 +5,77 @@ use crate::sequencer::Sequencer;
 
 pub enum Menu {
     Main { selected_menu: MainMenuItem },
-    Sequencer,
+    Sequencer { selected_menu: Option<SequencerMenuItem>, selected_note: Option<usize> } ,
     LinkController,
+    Settings
+}
+
+pub trait SubMenuItem {
+    fn as_index(&self) -> usize;
+    fn from_index(index: usize) -> Self;
+    fn length() -> usize;
 }
 
 pub enum MainMenuItem {
     StartSequencer,
     LinkController,
+    Settings,
     Exit,
 }
 
-impl MainMenuItem {
-    pub(crate) fn as_index(&self) -> usize {
+pub enum SequencerMenuItem {
+    OnOff,
+    Scale,
+    Playlist,
+    Exit,
+}
+
+impl SubMenuItem for MainMenuItem {
+    fn as_index(&self) -> usize {
         match self {
             MainMenuItem::StartSequencer => 0,
             MainMenuItem::LinkController => 1,
-            MainMenuItem::Exit => 2,
+            MainMenuItem::Settings => 2,
+            MainMenuItem::Exit => 3,
         }
     }
 
-    pub(crate) fn from_index(index: usize) -> Self {
+    fn from_index(index: usize) -> Self {
         match index {
             0 => MainMenuItem::StartSequencer,
             1 => MainMenuItem::LinkController,
-            2 => MainMenuItem::Exit,
+            2 => MainMenuItem::Settings,
+            3 => MainMenuItem::Exit,
             _ => MainMenuItem::StartSequencer, // fallback
         }
     }
 
-    pub(crate) fn length() -> usize {
+    fn length() -> usize {
+        MainMenuItem::Exit.as_index() + 1
+    }
+}
+
+impl SubMenuItem for SequencerMenuItem {
+    fn as_index(&self) -> usize {
+        match self {
+            SequencerMenuItem::OnOff => 0,
+            SequencerMenuItem::Scale => 1,
+            SequencerMenuItem::Playlist => 2,
+            SequencerMenuItem::Exit => 3,
+        }
+    }
+
+    fn from_index(index: usize) -> Self {
+        match index {
+            0 => SequencerMenuItem::OnOff,
+            1 => SequencerMenuItem::Scale,
+            2 => SequencerMenuItem::Playlist,
+            3 => SequencerMenuItem::Exit,
+            _ => SequencerMenuItem::OnOff, // fallback
+        }
+    }
+
+    fn length() -> usize {
         MainMenuItem::Exit.as_index() + 1
     }
 }
