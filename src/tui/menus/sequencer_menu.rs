@@ -1,8 +1,8 @@
 use crate::init_sequencer;
-use crate::tui::entities::{App, MainMenuItem, Menu, SequencerMenuItem, SubMenuItem};
+use crate::tui::entities::{App, MainMenuItem, Menu, SequencerMenuItem, MenuItemList};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
-use ratatui::prelude::{Color, Line, Style, Text};
+use ratatui::prelude::{Color, Line, Style, Stylize, Text};
 use ratatui::text::ToSpan;
 use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph};
 use ratatui::Frame;
@@ -64,7 +64,8 @@ pub fn draw(frame: &mut Frame, app: &App) {
     let note_width = note_height * 2;
 
     let mut y = sequence_area.top();
-    let mut x = sequence_area.left() + (((note_width as f32 * 1.2) - note_width as f32) / 2f32) as u16;
+    let mut x =
+        sequence_area.left() + (((note_width as f32 * 1.2) - note_width as f32) / 2f32) as u16;
     let base_x = x;
 
     let sequencer = app.sequencer.lock().unwrap();
@@ -81,8 +82,15 @@ pub fn draw(frame: &mut Frame, app: &App) {
             Color::Gray
         };
 
-        let note_block = Block::bordered()
-            .border_style(Style::default().fg(border_color));
+        let mut note_block = Block::bordered().border_style(Style::default().fg(border_color));
+
+        if let Some(s) = selected_index.1 {
+            if i == s {
+                note_block = Block::bordered()
+                    .border_style(Style::default().fg(border_color))
+                    .bg(Color::LightBlue);
+            }
+        }
 
         let text = Text::from(vec![
             Line::from(note.get_common_name()).centered(),
@@ -115,7 +123,7 @@ fn get_selected(app: &App) -> (Option<usize>, Option<usize>, Option<usize>) {
         Menu::Sequencer {
             selected_menu,
             selected_note,
-            selected_sequence
+            selected_sequence,
         } => match selected_menu {
             Some(menu) => (Some(menu.as_index()), None, None),
             None => (None, *selected_note, *selected_sequence),
@@ -139,6 +147,7 @@ fn handle_key_submenu(app: &mut App, key_event: KeyEvent) -> Result<(), io::Erro
             KeyCode::Enter => on_enter_submenu(app),
             KeyCode::Up => on_up_submenu(app),
             KeyCode::Down => on_down_submenu(app),
+            KeyCode::Right => on_right_submenu(app),
             _ => Ok(()),
         };
     }
@@ -153,7 +162,7 @@ fn on_enter_submenu(app: &mut App) -> Result<(), io::Error> {
                 SequencerMenuItem::OnOff => handle_on_off(app),
                 SequencerMenuItem::Scale => handle_scale_menu(app),
                 SequencerMenuItem::Exit => handle_exit(app),
-                _ => {Ok(())}
+                _ => Ok(()),
             },
         },
         _ => Err(io::Error::new(io::ErrorKind::Other, "Invalid menu")),
@@ -162,17 +171,15 @@ fn on_enter_submenu(app: &mut App) -> Result<(), io::Error> {
 
 fn on_up_submenu(app: &mut App) -> Result<(), io::Error> {
     match &app.current_menu {
-        Menu::Sequencer {
-            selected_menu,
-            ..
-        } => match selected_menu {
+        Menu::Sequencer { selected_menu, .. } => match selected_menu {
             Some(menu) => {
                 if menu.as_index() == 0 {
                     return Ok(());
                 }
                 app.current_menu = Menu::Sequencer {
                     selected_menu: Some(SequencerMenuItem::from_index(
-                        (menu.as_index() + SequencerMenuItem::length() - 1) % SequencerMenuItem::length(),
+                        (menu.as_index() + SequencerMenuItem::length() - 1)
+                            % SequencerMenuItem::length(),
                     )),
                     selected_note: None,
                     selected_sequence: None,
@@ -187,10 +194,7 @@ fn on_up_submenu(app: &mut App) -> Result<(), io::Error> {
 
 fn on_down_submenu(app: &mut App) -> Result<(), io::Error> {
     match &app.current_menu {
-        Menu::Sequencer {
-            selected_menu,
-            ..
-        } => match selected_menu {
+        Menu::Sequencer { selected_menu, .. } => match selected_menu {
             Some(menu) => {
                 if menu.as_index() == SequencerMenuItem::length() - 1 {
                     app.current_menu = Menu::Sequencer {
@@ -198,11 +202,12 @@ fn on_down_submenu(app: &mut App) -> Result<(), io::Error> {
                         selected_note: None,
                         selected_sequence: Some(0),
                     };
-                    return Ok(())
+                    return Ok(());
                 }
                 app.current_menu = Menu::Sequencer {
                     selected_menu: Some(SequencerMenuItem::from_index(
-                        (menu.as_index() + SequencerMenuItem::length() + 1) % SequencerMenuItem::length(),
+                        (menu.as_index() + SequencerMenuItem::length() + 1)
+                            % SequencerMenuItem::length(),
                     )),
                     selected_note: None,
                     selected_sequence: None,
@@ -213,6 +218,15 @@ fn on_down_submenu(app: &mut App) -> Result<(), io::Error> {
         },
         _ => Err(io::Error::new(io::ErrorKind::Other, "Invalid menu")),
     }
+}
+
+fn on_right_submenu(app: &mut App) -> Result<(), io::Error> {
+    app.current_menu = Menu::Sequencer {
+        selected_menu: None,
+        selected_note: Some(0),
+        selected_sequence: None,
+    };
+    Ok(())
 }
 
 fn handle_on_off(app: &mut App) -> Result<(), io::Error> {
