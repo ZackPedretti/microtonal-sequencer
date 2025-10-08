@@ -10,7 +10,7 @@ pub enum Menu {
     Settings
 }
 
-pub trait SubMenuItem {
+pub trait MenuItemList {
     fn as_index(&self) -> usize;
     fn from_index(index: usize) -> Self;
     fn length() -> usize;
@@ -31,7 +31,7 @@ pub enum SequencerMenuItem {
     Exit,
 }
 
-impl SubMenuItem for MainMenuItem {
+impl MenuItemList for MainMenuItem {
     fn as_index(&self) -> usize {
         match self {
             MainMenuItem::StartSequencer => 0,
@@ -56,7 +56,7 @@ impl SubMenuItem for MainMenuItem {
     }
 }
 
-impl SubMenuItem for SequencerMenuItem {
+impl MenuItemList for SequencerMenuItem {
     fn as_index(&self) -> usize {
         match self {
             SequencerMenuItem::OnOff => 0,

@@ -6,7 +6,7 @@ use ratatui::prelude::{Color, Style};
 use ratatui::text::ToSpan;
 use ratatui::widgets::{Block, List, ListItem, ListState};
 use crate::tui::{exit, App};
-use crate::tui::entities::{MainMenuItem, Menu, SubMenuItem};
+use crate::tui::entities::{MainMenuItem, Menu, MenuItemList};
 use crate::tui::menus::{link_controller_menu, sequencer_menu, settings_menu};
 
 pub fn draw(frame: &mut Frame, app: &App) {
