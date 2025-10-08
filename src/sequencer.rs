@@ -14,10 +14,10 @@ use crate::note::{Note, Scale};
 ///     - `n` means it plays `n + 1` times.
 #[derive(Clone)]
 pub(crate) struct Sequence {
-    name: String,
+    pub(crate) name: String,
     scale: Arc<Scale>,
     pub notes: Vec<Note>,
-    repeat: usize,
+    pub(crate) repeat: usize,
 }
 
 impl Sequence {
@@ -52,8 +52,8 @@ impl fmt::Display for Sequence {
 
 
 pub(crate) struct Sequencer {
-    sequences: Vec<Sequence>,
-    current_sequence_index: usize,
+    pub(crate) sequences: Vec<Sequence>,
+    pub(crate) current_sequence_index: usize,
     times_repeated: usize,
     pub(crate) current_note_index: usize,
     pub(crate) started: bool,

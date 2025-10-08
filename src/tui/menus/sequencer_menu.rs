@@ -4,7 +4,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::prelude::{Color, Line, Style, Stylize, Text};
 use ratatui::text::ToSpan;
-use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph, Wrap};
 use ratatui::Frame;
 use std::io;
 use std::sync::atomic::Ordering;
@@ -44,7 +44,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         .highlight_style(Style::default().fg(Color::Black).bg(Color::LightBlue));
 
     let mut menu_state = ListState::default();
-    
+
     match get_selected(app).unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default()) {
         SequencerMenuSelectedItem::SubMenuItem { item } => {menu_state.select(Some(item.as_index()))}
         _ => {menu_state.select(None)}
@@ -65,9 +65,10 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     let note_height = 5;
     let note_width = note_height * 2;
 
+    let spacing = 2;
+
     let mut y = sequence_area.top();
-    let mut x =
-        sequence_area.left() + (((note_width as f32 * 1.2) - note_width as f32) / 2f32) as u16;
+    let mut x = sequence_area.left() + spacing;
     let base_x = x;
 
     let sequencer = app.sequencer.lock().unwrap();
@@ -81,7 +82,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         let border_color = if i == current_note_index {
             Color::Red
         } else {
-            Color::Gray
+            Color::White
         };
 
         let mut note_block = Block::bordered().border_style(Style::default().fg(border_color));
@@ -117,7 +118,46 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         .style(Style::default().fg(Color::White))
         .title(" Playlist ".to_span().into_centered_line());
 
+    let sequencer = app.sequencer.lock().unwrap();
+    let sequences = sequencer.sequences.clone();
+    let current_sequence_index = sequencer.current_sequence_index;
+
+    drop(sequencer);
+
+    let rect_width = 20;
+    let playlist_area = playlist_block.inner(outer_layout[1]);
     frame.render_widget(playlist_block, outer_layout[1]);
+    let rect_height = playlist_area.height;
+    let mut x = playlist_area.left() + spacing;
+
+    for (i, sequence) in sequences.iter().enumerate() {
+        let rect = Rect::new(x, playlist_area.top(), rect_width, rect_height);
+
+        let border_color = if i == current_sequence_index {
+            Color::Red
+        } else {
+            Color::White
+        };
+
+        let sequence_block = Block::bordered()
+            .border_style(Style::default().fg(border_color))
+            .style(Style::default().fg(Color::White).bg(Color::Reset));
+
+        let text = Text::from(vec![
+            Line::from(sequence.name.clone()).centered(),
+            Line::from(format!("X{}", sequence.repeat + 1)).centered(),
+        ]);
+
+        let paragraph = Paragraph::new(text)
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: true });
+
+        frame.render_widget(sequence_block.clone(), rect);
+        let inner_rect = sequence_block.inner(rect);
+        frame.render_widget(paragraph, inner_rect);
+
+        x += rect_width + spacing;
+    }
 }
 
 fn get_selected(app: &App) -> Result<SequencerMenuSelectedItem, io::Error> {
