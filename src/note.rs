@@ -22,13 +22,11 @@ pub(crate) struct Note {
     pub(crate) scale: Arc<Scale>,
     pub(crate) octave: u8,
     pub(crate) duration: NoteDuration,
-    pub(crate) note_index: u8,
+    pub(crate) note_index: usize,
     pub(crate) velocity: u8,
-    pub(crate) panning: u8,
 }
 
 impl Note {
-
     pub fn get_midi_number(&self) -> f64 {
         let scale_note = match self.scale.steps.get(self.note_index as usize) {
             None => self.scale.steps[self.scale.steps.len() - 1],
@@ -36,19 +34,22 @@ impl Note {
         };
         scale_note + (self.octave * 12) as f64
     }
+    
+    pub fn get_common_name(&self) -> String {
+        format!("{}{}", self.scale.note_names[self.note_index].clone(), self.octave)
+    }
 }
 
 impl fmt::Display for Note {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Note(scale: {}, octave: {}, duration: {}, note: {}, velocity: {}, panning: {})",
+            "Note(scale: {}, octave: {}, duration: {}, note: {}, velocity: {})",
             self.scale.name,
             self.octave,
             self.duration.duration,
             self.scale.note_names[self.note_index as usize],
             self.velocity,
-            self.panning,
         )
     }
 }

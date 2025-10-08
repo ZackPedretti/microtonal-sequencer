@@ -27,11 +27,10 @@ pub struct JsonSequenceFile {
 
 #[derive(Debug, Deserialize)]
 pub struct JsonNote {
-    pub note_index: u8,
+    pub note_index: usize,
     octave: u8,
     duration: f64,
     velocity: u8,
-    panning: u8,
 }
 
 #[derive(Debug, Deserialize)]
@@ -84,7 +83,6 @@ fn build_note_from_json_note(json_note: JsonNote, scale: Arc<Scale>) -> Note {
         },
         note_index: json_note.note_index,
         velocity: json_note.velocity,
-        panning: json_note.panning,
     }
 }
 

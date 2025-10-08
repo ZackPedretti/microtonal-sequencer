@@ -12,10 +12,11 @@ use crate::note::{Note, Scale};
 /// - `repeat` controls how many times the sequence will repeat:
 ///     - `0` means it plays once.
 ///     - `n` means it plays `n + 1` times.
+#[derive(Clone)]
 pub(crate) struct Sequence {
     name: String,
     scale: Arc<Scale>,
-    notes: Vec<Note>,
+    pub notes: Vec<Note>,
     repeat: u8,
 }
 
@@ -54,7 +55,7 @@ pub(crate) struct Sequencer {
     sequences: Vec<Sequence>,
     current_sequence_index: usize,
     times_repeated: u8,
-    current_note_index: usize,
+    pub(crate) current_note_index: usize,
     previous_note: Option<Note>
 }
 
@@ -109,5 +110,17 @@ impl Sequencer {
 
     pub fn previous_note(&self) -> Option<Note> {
         self.previous_note.clone()
+    }
+    
+    pub fn current_sequence(&self) -> Sequence {
+        self.sequences[self.current_sequence_index].clone()
+    }
+    
+    pub fn current_sequence_name(&self) -> String {
+        self.sequences[self.current_sequence_index].name.clone()
+    }
+    
+    pub fn current_scale_name(&self) -> String {
+        self.sequences[self.current_sequence_index].scale.name.clone()
     }
 }
