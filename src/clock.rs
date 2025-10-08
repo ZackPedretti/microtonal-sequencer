@@ -20,7 +20,7 @@ impl Clock {
             return true;
         }
         let start = self.last_played_tick.unwrap_or(0);
-        (self.tick - start) % duration as u16 == 0
+        (self.tick - start) >= duration as u16
     }
 
     pub(crate) fn note_played(&mut self) {

@@ -56,7 +56,7 @@ pub(crate) struct Sequencer {
     current_sequence_index: usize,
     times_repeated: usize,
     pub(crate) current_note_index: usize,
-    previous_note: Option<Note>
+    pub(crate) started: bool,
 }
 
 impl Sequencer {
@@ -67,7 +67,7 @@ impl Sequencer {
             current_sequence_index: 0,
             times_repeated: 0,
             current_note_index: 0,
-            previous_note: None
+            started: false,
         }
     }
 
@@ -75,12 +75,10 @@ impl Sequencer {
         self.current_sequence_index = 0;
         self.current_note_index = 0;
         self.times_repeated = 0;
-        self.previous_note = None;
+        self.started = false;
     }
 
     pub fn next_note(&mut self) {
-
-        self.previous_note = Some(self.current_note());
 
         // Optimization: no need to check if we need to change sequence if the sequencer has
         // only one sequence
@@ -107,10 +105,6 @@ impl Sequencer {
     pub fn current_note(&self) -> Note {
         self.sequences[self.current_sequence_index].notes[self.current_note_index].clone()
     }
-
-    pub fn previous_note(&self) -> Option<Note> {
-        self.previous_note.clone()
-    }
     
     pub fn current_sequence(&self) -> Sequence {
         self.sequences[self.current_sequence_index].clone()
@@ -122,13 +116,5 @@ impl Sequencer {
     
     pub fn current_scale_name(&self) -> String {
         self.sequences[self.current_sequence_index].scale.name.clone()
-    }
-
-    pub fn current_sequence_index_and_repetition(&self) -> (usize, usize) {
-        (self.current_sequence_index, self.times_repeated)
-    }
-
-    pub fn has_changed_sequence_or_repetition(&self, sr_tuple: (usize, usize)) -> bool {
-        sr_tuple.0 != self.current_sequence_index || sr_tuple.1 != self.times_repeated
     }
 }

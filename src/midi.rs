@@ -15,24 +15,27 @@ fn midi_input_handler(
         0xF8 => {
             let mut seq = sequencer.lock().unwrap();
             let current_note = seq.current_note();
-            let previous_note_duration = match seq.previous_note() {
-                None => 0,
-                Some(previous_note) => previous_note.duration.get_tick_length(),
-            };
-            if clock.has_time_passed_note(previous_note_duration) {
-                let mut conn = output_conn.lock().unwrap();
+            if seq.started {
+                if clock.has_time_passed_note(current_note.duration.get_tick_length()) {
+                    let mut conn = output_conn.lock().unwrap();
 
-                if let Some(note) = seq.previous_note() {
-                    send_note(&mut conn, note, false);
+                    send_note(&mut conn, current_note, false);
+                    seq.next_note();
+                    let current_note = seq.current_note();
+                    send_note(&mut conn, current_note, true);
+                    drop(conn);
+                    
+                    if seq.current_note_index == 0 {
+                        clock.reset_tick();
+                    } else {
+                        clock.note_played();
+                    }
                 }
+            }
+            else {
+                let mut conn = output_conn.lock().unwrap();
                 send_note(&mut conn, current_note, true);
-                let current_sequence = seq.current_sequence_index_and_repetition();
-                seq.next_note();
-                if seq.has_changed_sequence_or_repetition(current_sequence) {
-                    clock.reset_tick();
-                } else {
-                    clock.note_played();
-                }
+                seq.started = true;
             }
             clock.next();
         }
@@ -103,12 +106,6 @@ fn send_note(conn: &mut MidiOutputConnection, note: Note, on: bool) {
 
 pub fn stop_sequencer(conn: &mut MidiOutputConnection, sequencer: Arc<Mutex<Sequencer>>) {
     send_note(conn, sequencer.lock().unwrap().current_note(), false);
-    match sequencer.lock().unwrap().previous_note() {
-        None => {}
-        Some(note) => {
-            send_note(conn, note, false);
-        }
-    };
     sequencer.lock().unwrap().reset();
 }
 
