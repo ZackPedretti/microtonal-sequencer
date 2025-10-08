@@ -13,9 +13,11 @@ use ratatui::{Frame, Terminal};
 use std::io;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
+use crate::tui::error_handling::MidiSequencerTUIResult;
 
 mod entities;
 mod menus;
+mod error_handling;
 
 pub fn run_tui(sequencer: Arc<Mutex<Sequencer>>) -> Result<(), io::Error> {
     enable_raw_mode()?;
@@ -30,17 +32,12 @@ pub fn run_tui(sequencer: Arc<Mutex<Sequencer>>) -> Result<(), io::Error> {
 
     while app.tui_on.load(Ordering::SeqCst) {
         terminal.draw(|frame| {
-            draw_ui(frame, &app);
+            draw_ui(frame, &mut app);
         })?;
 
         if poll(std::time::Duration::from_millis(100))? {
             if let Event::Key(key_event) = event::read()? {
-                match handle_key(&mut app, key_event) {
-                    Err(err) => {
-                        app.error = Some(err);
-                    }
-                    _ => {}
-                }
+                handle_key(&mut app, key_event).unwrap_or_display_err(&mut app);
             }
         }
     }
@@ -73,7 +70,7 @@ fn handle_key(app: &mut App, key_event: KeyEvent) -> Result<(), io::Error> {
     }
 }
 
-fn draw_ui(frame: &mut Frame, app: &App) {
+fn draw_ui(frame: &mut Frame, app: &mut App) {
     match &app.error {
         None => match &app.current_menu {
             Menu::Main { .. } => main_menu::draw(frame, app),

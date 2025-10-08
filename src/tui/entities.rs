@@ -5,7 +5,7 @@ use crate::sequencer::Sequencer;
 
 pub enum Menu {
     Main { selected_menu: MainMenuItem },
-    Sequencer { selected_menu: Option<SequencerMenuItem>, selected_note: Option<usize>, selected_sequence: Option<usize> } ,
+    Sequencer { selected_menu: SequencerMenuSelectedItem } ,
     LinkController,
     Settings
 }
@@ -23,12 +23,27 @@ pub enum MainMenuItem {
     Exit,
 }
 
+#[derive(Clone)]
 pub enum SequencerMenuItem {
     OnOff,
     Scale,
     Save,
     Load,
     Exit,
+}
+
+#[derive(Clone)]
+pub enum SequencerMenuSelectedItem {
+    SubMenuItem { item: SequencerMenuItem },
+    Note { item: usize },
+    PlaylistItem { item: usize },
+    Scale { item: usize },
+}
+
+impl SequencerMenuSelectedItem {
+    pub fn default() -> Self {
+        SequencerMenuSelectedItem::SubMenuItem { item: SequencerMenuItem::from_index(0) }
+    }
 }
 
 impl MenuItemList for MainMenuItem {
