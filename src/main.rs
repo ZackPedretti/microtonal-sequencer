@@ -38,10 +38,18 @@ fn start_main_loop(_input_conn: MidiInputConnection<()>, on: Arc<AtomicBool>, ou
     stop_sequencer(&mut output_conn.lock().unwrap(), sequencer.clone())
 }
 
+fn run_debug(sequencer: Arc<Mutex<sequencer::Sequencer>>) {
+    init_sequencer(sequencer, Arc::new(AtomicBool::new(true))).unwrap();
+    loop {
+
+    }
+}
+
 fn main() {
     let sequencer = Arc::new(Mutex::new(get_sequencer_from_json(
         SCALE_PATH,
         SEQUENCE_PATH,
     )));
     _ = run_tui(sequencer.clone());
+    // run_debug(sequencer.clone()); // Use to debug Sequencer code: possibility to write logs in the console without the TUI
 }

@@ -17,7 +17,7 @@ pub(crate) struct Sequence {
     name: String,
     scale: Arc<Scale>,
     pub notes: Vec<Note>,
-    repeat: u8,
+    repeat: usize,
 }
 
 impl Sequence {
@@ -54,7 +54,7 @@ impl fmt::Display for Sequence {
 pub(crate) struct Sequencer {
     sequences: Vec<Sequence>,
     current_sequence_index: usize,
-    times_repeated: u8,
+    times_repeated: usize,
     pub(crate) current_note_index: usize,
     previous_note: Option<Note>
 }
@@ -122,5 +122,13 @@ impl Sequencer {
     
     pub fn current_scale_name(&self) -> String {
         self.sequences[self.current_sequence_index].scale.name.clone()
+    }
+
+    pub fn current_sequence_index_and_repetition(&self) -> (usize, usize) {
+        (self.current_sequence_index, self.times_repeated)
+    }
+
+    pub fn has_changed_sequence_or_repetition(&self, sr_tuple: (usize, usize)) -> bool {
+        sr_tuple.0 != self.current_sequence_index || sr_tuple.1 != self.times_repeated
     }
 }
