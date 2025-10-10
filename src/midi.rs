@@ -39,7 +39,7 @@ fn midi_input_handler(
             }
             clock.next();
         }
-        0xFA => {
+        0xFA | 0xFC => {
             clock.reset_tick();
             let mut seq = sequencer.lock().unwrap();
             seq.reset();
