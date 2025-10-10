@@ -117,4 +117,8 @@ impl Sequencer {
     pub fn current_scale_name(&self) -> String {
         self.sequences[self.current_sequence_index].scale.name.clone()
     }
+    
+    pub fn current_sequence_length(&self) -> usize {
+        self.sequences[self.current_sequence_index].notes.len()
+    }
 }

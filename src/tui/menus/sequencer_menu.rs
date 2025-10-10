@@ -256,8 +256,40 @@ fn handle_exit(app: &mut App) -> Result<(), io::Error> {
 }
 
 fn handle_key_notes(app: &mut App, key_event: KeyEvent) -> Result<(), io::Error> {
-    if key_event.kind == KeyEventKind::Press {}
-    todo!();
+    if key_event.kind == KeyEventKind::Press {
+        return match key_event.code {
+            KeyCode::Left => on_left_notes(app),
+            KeyCode::Right => on_right_notes(app),
+            _ => Ok(())
+        }
+    }
+    Ok(())
+}
+
+fn on_left_notes(app: &mut App) -> Result<(), io::Error> {
+    match get_selected(app).unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default()) {
+        SequencerMenuSelectedItem::Note { item } => {
+            if item > 0 {
+                app.current_menu = Menu::Sequencer { selected_menu: SequencerMenuSelectedItem::Note { item: item - 1 } };
+                return Ok(())
+            }
+            app.current_menu = Menu::Sequencer { selected_menu: SequencerMenuSelectedItem::default() };
+            Ok(())
+        }
+        _ => Err(io::Error::new(io::ErrorKind::Other, "Out of bounds")),
+    }
+}
+
+fn on_right_notes(app: &mut App) -> Result<(), io::Error> {
+    match get_selected(app).unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default()) {
+        SequencerMenuSelectedItem::Note { item } => {
+            if item < app.sequencer.lock().unwrap().current_sequence_length() - 1 {
+                app.current_menu = Menu::Sequencer { selected_menu: SequencerMenuSelectedItem::Note { item: item + 1 } };
+            }
+            Ok(())
+        }
+        _ => Err(io::Error::new(io::ErrorKind::Other, "Out of bounds")),
+    }
 }
 
 fn handle_key_playlist(app: &mut App, key_event: KeyEvent) -> Result<(), io::Error> {
