@@ -1,6 +1,8 @@
+use std::collections::HashSet;
 use std::io;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
+use crossterm::event::KeyCode;
 use crate::sequencer::Sequencer;
 
 pub enum Menu {
@@ -100,10 +102,11 @@ impl MenuItemList for SequencerMenuItem {
 
 pub struct App {
     pub(crate) tui_on: AtomicBool,
-    pub sequencer_on: Arc<AtomicBool>,
+    pub(crate) sequencer_on: Arc<AtomicBool>,
     pub(crate) current_menu: Menu,
     pub(crate) sequencer: Arc<Mutex<Sequencer>>,
-    pub error: Option<io::Error>,
+    pub(crate) error: Option<io::Error>,
+    pub(crate) held_keys: HashSet<KeyCode>
 }
 
 impl App {
@@ -116,6 +119,7 @@ impl App {
             },
             sequencer,
             error: None,
+            held_keys: HashSet::new()
         }
     }
 }

@@ -1,14 +1,17 @@
 use crate::init_sequencer;
-use crate::tui::entities::{App, MainMenuItem, Menu, SequencerMenuItem, MenuItemList, SequencerMenuSelectedItem};
+use crate::note::Note;
+use crate::tui::entities::{
+    App, MainMenuItem, Menu, MenuItemList, SequencerMenuItem, SequencerMenuSelectedItem,
+};
+use crate::tui::error_handling::MidiSequencerTUIResult;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
-use ratatui::prelude::{Color, Line, Style, Stylize, Text};
+use ratatui::prelude::{Color, Line, Style, Text};
 use ratatui::text::ToSpan;
 use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph, Wrap};
 use ratatui::Frame;
 use std::io;
 use std::sync::atomic::Ordering;
-use crate::tui::error_handling::MidiSequencerTUIResult;
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
     let outer_layout = Layout::default()
@@ -45,9 +48,11 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
 
     let mut menu_state = ListState::default();
 
-    match get_selected(app).unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default()) {
-        SequencerMenuSelectedItem::SubMenuItem { item } => {menu_state.select(Some(item.as_index()))}
-        _ => {menu_state.select(None)}
+    match get_selected(app)
+        .unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default())
+    {
+        SequencerMenuSelectedItem::SubMenuItem { item } => menu_state.select(Some(item.as_index())),
+        _ => menu_state.select(None),
     }
 
     frame.render_stateful_widget(list, inner_upper_layout[0], &mut menu_state);
@@ -85,20 +90,43 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             Color::White
         };
 
-        let mut note_block = Block::bordered().border_style(Style::default().fg(border_color));
+        let selected = if let SequencerMenuSelectedItem::Note { item } = get_selected(app)
+            .unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default())
+        {
+            Some(item)
+        } else {
+            None
+        };
 
-        if let SequencerMenuSelectedItem::Note { item } = get_selected(app).unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default()) {
-            if i == item {
-                note_block = Block::bordered()
-                    .border_style(Style::default().fg(border_color))
-                    .bg(Color::LightBlue);
+        let bg_color = match selected {
+            None => Color::Reset,
+            Some(selected_i) => {
+                if selected_i == i {
+                    if app.sequencer.lock().unwrap().started {
+                        Color::LightBlue
+                    } else if app.held_keys.contains(&KeyCode::Char('v')) {
+                        Color::Green
+                    } else if app.held_keys.contains(&KeyCode::Char('b')) {
+                        Color::Magenta
+                    } else if app.held_keys.contains(&KeyCode::Char('n')) {
+                        Color::Cyan
+                    } else {
+                        Color::LightBlue
+                    }
+                } else {
+                    Color::Reset
+                }
             }
-        }
+        };
+
+        let note_block = Block::bordered()
+            .border_style(Style::default().fg(border_color))
+            .style(Style::default().bg(bg_color));
 
         let text = Text::from(vec![
             Line::from(note.get_common_name()).centered(),
-            Line::from(note.velocity.to_string()).centered(),
             Line::from(note.duration.duration.to_string()).centered(),
+            Line::from(note.velocity.to_string()).centered(),
         ]);
 
         let paragraph = Paragraph::new(text).alignment(Alignment::Center);
@@ -162,17 +190,19 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
 
 fn get_selected(app: &App) -> Result<SequencerMenuSelectedItem, io::Error> {
     match &app.current_menu {
-        Menu::Sequencer { selected_menu} => Ok(selected_menu.clone()),
-        _ => Err(io::Error::new(io::ErrorKind::Other,"Out of bounds")),
+        Menu::Sequencer { selected_menu } => Ok(selected_menu.clone()),
+        _ => Err(io::Error::new(io::ErrorKind::Other, "Out of bounds")),
     }
 }
 
 pub fn handle_key(app: &mut App, key_event: KeyEvent) -> Result<(), io::Error> {
-    match get_selected(app).unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default()) {
-        SequencerMenuSelectedItem::SubMenuItem { .. } => {handle_key_submenu(app, key_event)}
-        SequencerMenuSelectedItem::Note { .. } => {handle_key_notes(app, key_event)}
-        SequencerMenuSelectedItem::PlaylistItem { .. } => {handle_key_playlist(app, key_event)}
-        SequencerMenuSelectedItem::Scale { .. } => Ok(())
+    match get_selected(app)
+        .unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default())
+    {
+        SequencerMenuSelectedItem::SubMenuItem { .. } => handle_key_submenu(app, key_event),
+        SequencerMenuSelectedItem::Note { .. } => handle_key_notes(app, key_event),
+        SequencerMenuSelectedItem::PlaylistItem { .. } => handle_key_playlist(app, key_event),
+        SequencerMenuSelectedItem::Scale { .. } => Ok(()),
     }
 }
 
@@ -190,46 +220,58 @@ fn handle_key_submenu(app: &mut App, key_event: KeyEvent) -> Result<(), io::Erro
 }
 
 fn on_enter_submenu(app: &mut App) -> Result<(), io::Error> {
-    match get_selected(app).unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default()) {
-        SequencerMenuSelectedItem::SubMenuItem { item } => {
-            match item {
-                SequencerMenuItem::OnOff => handle_on_off(app),
-                SequencerMenuItem::Scale => handle_scale_menu(app),
-                SequencerMenuItem::Exit => handle_exit(app),
-                _ => Ok(()),
-            }
-        }
+    match get_selected(app)
+        .unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default())
+    {
+        SequencerMenuSelectedItem::SubMenuItem { item } => match item {
+            SequencerMenuItem::OnOff => handle_on_off(app),
+            SequencerMenuItem::Scale => handle_scale_menu(app),
+            SequencerMenuItem::Exit => handle_exit(app),
+            _ => Ok(()),
+        },
         _ => Err(io::Error::new(io::ErrorKind::Other, "Out of bounds")),
     }
 }
 
 fn on_up_submenu(app: &mut App) -> Result<(), io::Error> {
-    match get_selected(app).unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default()) {
+    match get_selected(app)
+        .unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default())
+    {
         SequencerMenuSelectedItem::SubMenuItem { item } => {
             if item.as_index() > 0 {
-                app.current_menu = Menu::Sequencer { selected_menu: SequencerMenuSelectedItem::SubMenuItem{ item: SequencerMenuItem::from_index(item.as_index() - 1) } }
+                app.current_menu = Menu::Sequencer {
+                    selected_menu: SequencerMenuSelectedItem::SubMenuItem {
+                        item: SequencerMenuItem::from_index(item.as_index() - 1),
+                    },
+                }
             }
             Ok(())
         }
-        _ => Err(io::Error::new(io::ErrorKind::Other, "Out of bounds"))
+        _ => Err(io::Error::new(io::ErrorKind::Other, "Out of bounds")),
     }
 }
 
 fn on_down_submenu(app: &mut App) -> Result<(), io::Error> {
-    match get_selected(app).unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default()) {
+    match get_selected(app)
+        .unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default())
+    {
         SequencerMenuSelectedItem::SubMenuItem { item } => {
             if item.as_index() < SequencerMenuItem::length() - 1 {
-                app.current_menu = Menu::Sequencer { selected_menu: SequencerMenuSelectedItem::SubMenuItem{ item: SequencerMenuItem::from_index(item.as_index() + 1) } }
+                app.current_menu = Menu::Sequencer {
+                    selected_menu: SequencerMenuSelectedItem::SubMenuItem {
+                        item: SequencerMenuItem::from_index(item.as_index() + 1),
+                    },
+                }
             }
             Ok(())
         }
-        _ => Err(io::Error::new(io::ErrorKind::Other, "Out of bounds"))
+        _ => Err(io::Error::new(io::ErrorKind::Other, "Out of bounds")),
     }
 }
 
 fn on_right_submenu(app: &mut App) -> Result<(), io::Error> {
     app.current_menu = Menu::Sequencer {
-        selected_menu: SequencerMenuSelectedItem::Note {item: 0}
+        selected_menu: SequencerMenuSelectedItem::Note { item: 0 },
     };
     Ok(())
 }
@@ -260,20 +302,28 @@ fn handle_key_notes(app: &mut App, key_event: KeyEvent) -> Result<(), io::Error>
         return match key_event.code {
             KeyCode::Left => on_left_notes(app),
             KeyCode::Right => on_right_notes(app),
-            _ => Ok(())
-        }
+            KeyCode::Up => on_up_notes(app),
+            KeyCode::Down => on_down_notes(app),
+            _ => Ok(()),
+        };
     }
     Ok(())
 }
 
 fn on_left_notes(app: &mut App) -> Result<(), io::Error> {
-    match get_selected(app).unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default()) {
+    match get_selected(app)
+        .unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default())
+    {
         SequencerMenuSelectedItem::Note { item } => {
             if item > 0 {
-                app.current_menu = Menu::Sequencer { selected_menu: SequencerMenuSelectedItem::Note { item: item - 1 } };
-                return Ok(())
+                app.current_menu = Menu::Sequencer {
+                    selected_menu: SequencerMenuSelectedItem::Note { item: item - 1 },
+                };
+                return Ok(());
             }
-            app.current_menu = Menu::Sequencer { selected_menu: SequencerMenuSelectedItem::default() };
+            app.current_menu = Menu::Sequencer {
+                selected_menu: SequencerMenuSelectedItem::default(),
+            };
             Ok(())
         }
         _ => Err(io::Error::new(io::ErrorKind::Other, "Out of bounds")),
@@ -281,14 +331,77 @@ fn on_left_notes(app: &mut App) -> Result<(), io::Error> {
 }
 
 fn on_right_notes(app: &mut App) -> Result<(), io::Error> {
-    match get_selected(app).unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default()) {
+    match get_selected(app)
+        .unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default())
+    {
         SequencerMenuSelectedItem::Note { item } => {
             if item < app.sequencer.lock().unwrap().current_sequence_length() - 1 {
-                app.current_menu = Menu::Sequencer { selected_menu: SequencerMenuSelectedItem::Note { item: item + 1 } };
+                app.current_menu = Menu::Sequencer {
+                    selected_menu: SequencerMenuSelectedItem::Note { item: item + 1 },
+                };
             }
             Ok(())
         }
         _ => Err(io::Error::new(io::ErrorKind::Other, "Out of bounds")),
+    }
+}
+
+fn on_up_notes(app: &mut App) -> Result<(), io::Error> {
+    if app.held_keys.is_empty() || app.sequencer.lock().unwrap().started {
+        return Ok(());
+    }
+    match get_selected(app)
+        .unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default())
+    {
+        SequencerMenuSelectedItem::Note { item } => {
+            let mut sequencer = app.sequencer.lock().unwrap();
+            let current_sequence_i = sequencer.current_sequence_index;
+            let sequence = &mut sequencer.sequences[current_sequence_i];
+            let note = &mut sequence.notes[item];
+            if app.held_keys.contains(&KeyCode::Char('n')) {
+                increment_tonality_of_note(note);
+            }
+            Ok(())
+        }
+        _ => Err(io::Error::new(io::ErrorKind::Other, "Out of bounds")),
+    }
+}
+
+fn on_down_notes(app: &mut App) -> Result<(), io::Error> {
+    if app.held_keys.is_empty() || app.sequencer.lock().unwrap().started {
+        return Ok(());
+    }
+    match get_selected(app)
+        .unwrap_or_default_val_and_display_err(app, SequencerMenuSelectedItem::default())
+    {
+        SequencerMenuSelectedItem::Note { item } => {
+            let mut sequencer = app.sequencer.lock().unwrap();
+            let current_sequence_i = sequencer.current_sequence_index;
+            let sequence = &mut sequencer.sequences[current_sequence_i];
+            let note = &mut sequence.notes[item];
+            if app.held_keys.contains(&KeyCode::Char('n')) {
+                decrement_tonality_of_note(note);
+            }
+            Ok(())
+        }
+        _ => Err(io::Error::new(io::ErrorKind::Other, "Out of bounds")),
+    }
+}
+
+// TODO: Increase by octave when holding shift
+fn increment_tonality_of_note(note: &mut Note) {
+    let scale_len = note.scale.steps.len();
+    note.note_index = (note.note_index + 1) % scale_len;
+    if note.note_index == 0 {
+        note.octave += 1;
+    }
+}
+
+fn decrement_tonality_of_note(note: &mut Note) {
+    let scale_len = note.scale.steps.len();
+    note.note_index = (note.note_index + scale_len - 1) % scale_len;
+    if note.note_index == scale_len - 1 {
+        note.octave -= 1;
     }
 }
 

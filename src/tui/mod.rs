@@ -3,7 +3,7 @@ use crate::tui::entities::{App, Menu};
 use crate::tui::menus::sequencer_menu;
 use crate::tui::menus::{error_screen, link_controller_menu};
 use crate::tui::menus::{main_menu, settings_menu};
-use crossterm::event::{poll, read, Event, KeyEvent};
+use crossterm::event::{poll, read, Event, KeyCode, KeyEvent, KeyEventKind};
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
@@ -18,6 +18,12 @@ use crate::tui::error_handling::MidiSequencerTUIResult;
 mod entities;
 mod menus;
 mod error_handling;
+
+const ALLOWED_KEYS: &[KeyCode] = &[
+    KeyCode::Char('v'),
+    KeyCode::Char('b'),
+    KeyCode::Char('n'),
+];
 
 pub fn run_tui(sequencer: Arc<Mutex<Sequencer>>) -> Result<(), io::Error> {
     enable_raw_mode()?;
@@ -59,6 +65,7 @@ fn exit(app: &mut App) {
 }
 
 fn handle_key(app: &mut App, key_event: KeyEvent) -> Result<(), io::Error> {
+    handle_held_keys(app, &key_event);
     match app.error {
         None => match &app.current_menu {
             Menu::Main { .. } => main_menu::handle_key(app, key_event),
@@ -67,6 +74,21 @@ fn handle_key(app: &mut App, key_event: KeyEvent) -> Result<(), io::Error> {
             Menu::Settings => settings_menu::handle_key(app, key_event),
         },
         Some(_) => Ok(error_screen::handle_key(app, key_event)),
+    }
+}
+
+fn handle_held_keys(app: &mut App, key_event: &KeyEvent) {
+    if !ALLOWED_KEYS.contains(&key_event.code) {
+        return;
+    }
+    match key_event.kind {
+        KeyEventKind::Press => {
+            app.held_keys.insert(key_event.code.clone());
+        }
+        KeyEventKind::Release => {
+            app.held_keys.remove(&key_event.code);
+        }
+        _ => {}
     }
 }
 
